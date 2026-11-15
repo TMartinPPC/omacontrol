@@ -9,30 +9,46 @@
 # exactly that record and nothing else; so does this page. Recomputing any of
 # it here would be a second answer to a question that already has one.
 
-USAGE_PROVIDERS=(claude codex fireworks)
+# Every collector Omarchy ships on this machine, read off the commands rather
+# than named here: 4.5 carries twenty-odd of them and adds one with each agent
+# it can serve. `omarchy-agent-usage-update` is the shared refresher, not a
+# provider.
+usage_providers() {
+  local dir found
+  local IFS=:
+  for dir in $PATH; do
+    for found in "$dir"/omarchy-agent-usage-*; do
+      [[ -x $found ]] || continue
+      found=${found##*/}
+      [[ $found == omarchy-agent-usage-update ]] && continue
+      printf '%s\n' "${found#omarchy-agent-usage-}"
+    done
+  done | sort -u
+}
 
 # The provider this machine actually sends agent work to, which the menu
 # already tracks as the default agent.
 usage_provider() {
-  local current
+  local current provider
   current=$(agents_state | jq -r '.current // ""' 2>/dev/null)
-  case ${current:-} in
-    *claude*) printf 'claude' ;;
-    *codex*) printf 'codex' ;;
-    *fireworks*) printf 'fireworks' ;;
-    # Whichever one can answer, so a machine whose default agent is something
-    # else still gets the page rather than an empty one.
-    *) usage_first_ready ;;
-  esac
+  current=${current,,}
+  # The collector whose name the default agent's own carries — "Claude Code"
+  # names claude, "OpenCode" names opencode. A default agent Omarchy offers
+  # but ships no collector for falls through, so the page still gets a
+  # provider: whichever one can answer.
+  while IFS= read -r provider; do
+    [[ -n $provider && $current == *"$provider"* ]] && { printf '%s' "$provider"; return; }
+  done < <(usage_providers)
+  usage_first_ready
 }
 
 usage_first_ready() {
   local provider
-  for provider in "${USAGE_PROVIDERS[@]}"; do
+  while IFS= read -r provider; do
     command -v "omarchy-agent-usage-$provider" >/dev/null 2>&1 || continue
     printf '%s' "$provider"
     return
-  done
+  done < <(usage_providers)
 }
 
 # The record, as the provider's own collector prints it. Not forced: `--force`
@@ -54,7 +70,7 @@ usage_state() {
   record=$(usage_record "$provider")
 
   # Which providers this machine could show at all, for the picker.
-  available=$(printf '%s\n' "${USAGE_PROVIDERS[@]}" \
+  available=$(usage_providers \
     | while read -r name; do
         command -v "omarchy-agent-usage-$name" >/dev/null 2>&1 && printf '%s\n' "$name"
       done | jq -Rc -s '[ split("\n")[] | select(length > 0) ]')
