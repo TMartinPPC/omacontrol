@@ -86,8 +86,12 @@ Item {
               maskSpreadAtMin: 1.0
             }
 
+            // A background can be a video from 4.5 on, and a frame of one is
+            // not the tile's to draw: it says what it is instead. Omarchy's
+            // own picker draws it the same way.
             Image {
               anchors.fill: parent
+              visible: tile.modelData.video !== true
               source: tile.modelData.source !== "" ? "file://" + tile.modelData.source : ""
               fillMode: Image.PreserveAspectCrop
               // Decoded at the size it is drawn *in device pixels*, rather
@@ -102,6 +106,16 @@ Item {
               sourceSize.width: Math.round(picture.width * Screen.devicePixelRatio)
               asynchronous: true
               cache: true
+            }
+
+            Text {
+              textFormat: Text.PlainText
+              anchors.centerIn: parent
+              visible: tile.modelData.video === true
+              text: "Video"
+              color: Local.Palette.muted
+              font.family: Local.Palette.fontFamily
+              font.pixelSize: Style.font.caption
             }
           }
 
