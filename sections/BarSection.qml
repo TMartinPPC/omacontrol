@@ -202,11 +202,10 @@ Ui.SectionBody {
             return page.sectionTitle(key)
           }
 
-          // Everything you can do to a row sits in front of its name, in the
-          // order you reach for it: where it sits, then which section, then
-          // whether it is in the bar at all. One width for the lot, so every
-          // name in the list starts in the same place.
-          leadingWidth: page.controlsWidth
+          // One width for the lot, so every name in the list starts in the
+          // same place — until the section chooser opens, when the holder
+          // sizes to the buttons instead and the name steps out of their way.
+          leadingWidth: widgetRow.choosing ? -1 : page.controlsWidth
           leading: Row {
             spacing: Style.space(6)
 
@@ -375,8 +374,9 @@ Ui.SectionBody {
       width: parent.width
       label: "Add spacer"
       description: "Blank space, as wide as you set it. Add as many as you like."
-      // The same column as the rows above, so this name lines up with theirs.
-      leadingWidth: page.controlsWidth
+      // The same column as the rows above, so this name lines up with theirs —
+      // and the same step-aside once its own chooser opens.
+      leadingWidth: addSpacer.choosing ? -1 : page.controlsWidth
 
       property bool choosing: false
       navKeys: [{ key: "↵", label: "Add" }]
