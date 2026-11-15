@@ -136,7 +136,8 @@ Ui.SectionBody {
           { value: "", label: "Default" },
           { value: "dwindle", label: "Dwindle" },
           { value: "master", label: "Master" },
-          { value: "scrolling", label: "Scrolling" }
+          { value: "scrolling", label: "Scrolling" },
+          { value: "floating", label: "Floating" }
         ]
         value: String(setupGroup.modelData.layout || "")
         onPicked: function(next) { page.app.run(["workspaces", "setup", "set", setupGroup.id, "layout", next]) }

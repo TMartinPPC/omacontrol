@@ -29,6 +29,8 @@ hypr_keyword() {
     snap-monitor-gap) echo "general:snap:monitor_gap int" ;;
 
     # The tiling engine, and the knobs that belong to whichever one is on.
+    # `layout` itself is Omarchy's to answer from 4.5 on — see
+    # layout_override_retire — so it is read through its command, not here.
     layout) echo "general:layout str" ;;
     dwindle-preserve-split) echo "dwindle:preserve_split bool" ;;
     dwindle-smart-split) echo "dwindle:smart_split bool" ;;
@@ -134,7 +136,7 @@ hypr_keys() {
   cat <<'KEYS'
 gaps-in gaps-out float-gaps gaps-workspaces border-size border-part-of-window
 snap snap-window-gap snap-monitor-gap
-layout dwindle-preserve-split dwindle-smart-split dwindle-force-split
+dwindle-preserve-split dwindle-smart-split dwindle-force-split
 dwindle-split-width-multiplier dwindle-default-split-ratio
 master-mfact master-orientation master-new-status
 scrolling-column-width scrolling-fullscreen-on-one-column
@@ -229,6 +231,16 @@ heal_managed_lua() {
   luac -p "$MANAGED_LUA" >/dev/null 2>&1 && return 0
   render_managed
   hyprctl reload >/dev/null 2>&1 || true
+}
+
+# Omarchy 4.5 owns the default workspace layout, and its saved choice wins
+# over the general:layout this file used to write. A layout set from an
+# earlier OmaControl is therefore dead weight: retired on the first state
+# read, so the changed count never carries a setting no page shows any more.
+# hypr_reset still knows the keyword, which is all the retirement needs.
+layout_override_retire() {
+  jq -e --arg k layout '(.hypr // {}) | has($k)' <<<"$(read_store)" >/dev/null \
+    && { hypr_reset layout || true; }
 }
 
 render_managed_lua() {
