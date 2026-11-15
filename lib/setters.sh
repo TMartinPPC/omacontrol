@@ -30,9 +30,10 @@ setting_current() {
     theme) omarchy-theme-current 2>/dev/null | head -n1 ;;
     font) omarchy font current 2>/dev/null | head -n1 ;;
     text-scale) omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1 ;;
+    workspace-layout) omarchy-hyprland-workspace-layout-default 2>/dev/null | head -n1 ;;
     nightlight) nightlight_enabled ;;
     bar-position) jq -r '.bar.position // "top"' <<<"$(read_shell_json)" ;;
-    bar-transparent) jq -r '((.bar.transparent // false) | tostring)' <<<"$(read_shell_json)" ;;
+    bar-background) jq -r '.bar.background // (if ((.bar.transparent // false) == true) then "none" else "opaque" end)' <<<"$(read_shell_json)" ;;
     bar-center-anchor) jq -r '.bar.centerAnchor // ""' <<<"$(read_shell_json)" ;;
     bar-active-switch-count|bar-network-warning|bar-battery-warnings)
       jq -r --arg field "$(gear_field "$1")" '[ (.bar.layout // {})[][]?
@@ -153,6 +154,13 @@ set_key_apply() {
     theme) [[ -n $value ]] || die "no theme given"; omarchy-theme-set "$value" ;;
     font) [[ -n $value ]] || die "no font given"; omarchy font set "$value" ;;
     text-scale) [[ -n $value ]] || die "no text size given"; omarchy display text size "$value" ;;
+    workspace-layout)
+      # Master stays a Hyprland setting Omarchy has no say over; the page
+      # offers it only where the command cannot answer.
+      case $value in
+        dwindle|scrolling|floating) omarchy-hyprland-workspace-layout-default "$value" ;;
+        *) die "'$value' is not a layout Omarchy sets" ;;
+      esac ;;
     nightlight)
       # The toggle script has no absolute set, so only flip when the requested
       # state differs from the live one — repeated clicks stay idempotent.
@@ -179,10 +187,10 @@ set_key_apply() {
         top|bottom|left|right) omarchy bar position "$value" ;;
         *) die "bad bar position '$value'" ;;
       esac ;;
-    bar-transparent)
+    bar-background)
       case $value in
-        true|false|toggle) omarchy bar transparent "$value" ;;
-        *) die "bad bar transparency '$value'" ;;
+        opaque|glassy|none) omarchy bar background "$value" ;;
+        *) die "bad bar background '$value'" ;;
       esac ;;
     bar-center-anchor)
       [[ -n $value ]] || die "no widget id given"

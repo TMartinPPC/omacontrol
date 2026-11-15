@@ -59,13 +59,18 @@ Ui.SectionBody {
       onResetRequested: page.app.resetSetting("bar-position")
     }
 
-    Ui.SwitchRow {
-      label: "Transparent"
-      description: "Drops the bar's own background so the wallpaper shows through."
-      checked: page.app.barState.transparent === true
-      onRequested: function(next) { page.app.set("bar-transparent", next ? "true" : "false") }
-      changed: page.app.isChanged("bar-transparent")
-      onResetRequested: page.app.resetSetting("bar-transparent")
+    Ui.ChoiceRow {
+      label: "Background"
+      description: "Glassy blurs what sits behind the bar. Transparent drops the background so the wallpaper shows through."
+      value: page.app.barState.background !== undefined ? String(page.app.barState.background) : "opaque"
+      options: [
+        { value: "opaque", label: "Opaque" },
+        { value: "transparent", label: "Transparent" },
+        { value: "glassy", label: "Glassy" }
+      ]
+      onPicked: function(next) { page.app.set("bar-background", next) }
+      changed: page.app.isChanged("bar-background")
+      onResetRequested: page.app.resetSetting("bar-background")
     }
 
     Ui.PickerRow {
@@ -92,10 +97,26 @@ Ui.SectionBody {
     return out
   }
 
+  // The bar draws them in this order. The tray drawer holds widgets that only
+  // appear when the drawer opens, so a spacer has no business in it.
+  readonly property var sections: [
+    { key: "left", title: "Left" },
+    { key: "centerBegin", title: "Left of center" },
+    { key: "center", title: "Center" },
+    { key: "centerEnd", title: "Right of center" },
+    { key: "right", title: "Right" },
+    { key: "tray", title: "Tray drawer" }
+  ]
+
+  function sectionTitle(key) {
+    for (var i = 0; i < page.sections.length; i++)
+      if (page.sections[i].key === key) return page.sections[i].title
+    return key
+  }
+
   function inBar(id) {
-    var sections = ["left", "center", "right"]
-    for (var s = 0; s < sections.length; s++) {
-      var list = widgets(sections[s])
+    for (var s = 0; s < page.sections.length; s++) {
+      var list = widgets(page.sections[s].key)
       for (var i = 0; i < list.length; i++)
         if (String(list[i]) === String(id)) return true
     }
@@ -112,11 +133,7 @@ Ui.SectionBody {
   // vocabulary the bar has: there is no position beyond which section and
   // which place in it.
   Repeater {
-    model: [
-      { key: "left", title: "Left" },
-      { key: "center", title: "Center" },
-      { key: "right", title: "Right" }
-    ]
+    model: page.sections
 
     delegate: Ui.SettingGroup {
       id: sectionGroup
@@ -124,7 +141,14 @@ Ui.SectionBody {
       readonly property string sectionKey: modelData.key
       width: parent.width
       title: modelData.title
-      note: page.widgets(modelData.key).length === 0 ? "Nothing here yet." : ""
+      note: {
+        if (page.widgets(modelData.key).length > 0) return ""
+        // The drawer is easy to mistake for a lost widget: it only shows its
+        // contents while it is open.
+        return sectionKey === "tray"
+          ? "Nothing here yet. A widget in the drawer appears when it is opened."
+          : "Nothing here yet."
+      }
 
       Repeater {
         model: page.widgets(sectionGroup.modelData.key)
@@ -168,14 +192,14 @@ Ui.SectionBody {
           }
 
           // Which section a widget belongs to is one decision, so it is one
-          // button: Move asks, and the two sections it is not in answer.
+          // button: Move asks, and the sections it is not in answer.
           property bool choosing: false
-          readonly property var elsewhere: ["left", "center", "right"].filter(function(s) {
-            return s !== widgetRow.section
-          })
+          readonly property var elsewhere: page.sections
+            .map(function(s) { return s.key })
+            .filter(function(s) { return s !== widgetRow.section })
 
           function sectionTitle(key) {
-            return key === "left" ? "Left" : key === "center" ? "Center" : "Right"
+            return page.sectionTitle(key)
           }
 
           // Everything you can do to a row sits in front of its name, in the
@@ -376,11 +400,13 @@ Ui.SectionBody {
         }
 
         Repeater {
-          model: addSpacer.choosing ? ["left", "center", "right"] : []
+          model: addSpacer.choosing
+            ? page.sections.map(function(s) { return s.key }).filter(function(s) { return s !== "tray" })
+            : []
           delegate: Button {
             required property var modelData
             anchors.verticalCenter: parent.verticalCenter
-            text: modelData === "left" ? "Left" : modelData === "center" ? "Center" : "Right"
+            text: page.sectionTitle(modelData)
             bordered: true
             foreground: Ui.Palette.foreground
             accent: Ui.Palette.accent
