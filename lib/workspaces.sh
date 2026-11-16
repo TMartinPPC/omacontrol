@@ -328,17 +328,25 @@ render_workspace_setups_lua() {
   [[ $rules == "{}" ]] && return 0
   echo ""
   echo "-- Workspaces set up from the Workspaces page."
+  # Floating is not a Hyprland layout engine — it is Omarchy's own mode, the
+  # one its Super + L cycle hands out, so a floating workspace goes through
+  # o.workspace_mode and carries no layout rule at all. A tiled layout keeps
+  # the rule, the same field Omarchy's own modes file writes for one.
   jq -r 'to_entries[] | select(.value != {})
     | .value as $r
-    | [ (if ($r.monitor // "") != "" then "monitor = \"" + $r.monitor + "\"" else empty end),
-        (if $r.default == true then "default = true" else empty end),
-        (if $r.persistent == true then "persistent = true" else empty end),
-        (if ($r.name // "") != "" then "default_name = \"" + $r.name + "\"" else empty end),
-        (if ($r.layout // "") != "" then "layout = \"" + $r.layout + "\"" else empty end),
-        (if $r.minimal == true then "gaps_in = 0, gaps_out = 0, no_border = true, no_rounding = true, decorate = false" else empty end)
-      ] as $fields
-    | select(($fields | length) > 0)
-    | "hl.workspace_rule({ workspace = \"" + .key + "\", " + ($fields | join(", ")) + " })"' <<<"$rules"
+    | if ($r.layout // "") == "floating" then
+        "o.workspace_mode({ workspace = \"" + .key + "\", mode = \"floating\" })"
+      else
+        [ (if ($r.monitor // "") != "" then "monitor = \"" + $r.monitor + "\"" else empty end),
+          (if $r.default == true then "default = true" else empty end),
+          (if $r.persistent == true then "persistent = true" else empty end),
+          (if ($r.name // "") != "" then "default_name = \"" + $r.name + "\"" else empty end),
+          (if ($r.layout // "") != "" then "layout = \"" + $r.layout + "\"" else empty end),
+          (if $r.minimal == true then "gaps_in = 0, gaps_out = 0, no_border = true, no_rounding = true, decorate = false" else empty end)
+        ] as $fields
+        | select(($fields | length) > 0)
+        | "hl.workspace_rule({ workspace = \"" + .key + "\", " + ($fields | join(", ")) + " })"
+      end' <<<"$rules"
 }
 
 # One field of one class. A class is a regex to Hyprland, so the two

@@ -29,7 +29,7 @@ Ui.SectionBody {
 
     Ui.ChoiceRow {
       label: "Layout"
-      description: "Scrolling gives you niri-style side-scrolling columns. Floating gives a workspace titlebars and a dock."
+      description: "Scrolling gives you niri-style side-scrolling columns. Floating turns a workspace into a floating desktop, titlebars and dock and all."
       value: page.engine
       options: {
         var out = [

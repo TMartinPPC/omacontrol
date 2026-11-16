@@ -203,6 +203,7 @@ state() {
   # it rather than each subshell parsing the menu again and losing it.
   heal_managed_lua
   layout_override_retire
+  bar_background_migrate
   menu_entries >/dev/null
 
   par_begin

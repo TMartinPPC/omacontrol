@@ -18,7 +18,7 @@ usage_providers() {
   local IFS=:
   for dir in $PATH; do
     for found in "$dir"/omarchy-agent-usage-*; do
-      [[ -x $found ]] || continue
+      [[ -f $found && -x $found ]] || continue
       found=${found##*/}
       [[ $found == omarchy-agent-usage-update ]] && continue
       printf '%s\n' "${found#omarchy-agent-usage-}"
@@ -27,18 +27,19 @@ usage_providers() {
 }
 
 # The provider this machine actually sends agent work to, which the menu
-# already tracks as the default agent.
+# already tracks as the default agent. The collector is matched against the
+# entry's id and its label both, because the ids abbreviate where the
+# collectors do not — dsh collects for DeepSeek, mcode for MiniMax — and
+# longer names are tried first, so grokbot is not read as grok.
 usage_provider() {
-  local current provider
-  current=$(agents_state | jq -r '.current // ""' 2>/dev/null)
-  current=${current,,}
-  # The collector whose name the default agent's own carries — "Claude Code"
-  # names claude, "OpenCode" names opencode. A default agent Omarchy offers
-  # but ships no collector for falls through, so the page still gets a
-  # provider: whichever one can answer.
+  local id label provider
+  read -r id label < <(agents_state | jq -r '''
+    ([.items[]? | select(.checked == true)] | first)
+    | if . then "\(.id | ascii_downcase)\t\(.label | ascii_downcase)" else "\t" end''' 2>/dev/null)
   while IFS= read -r provider; do
-    [[ -n $provider && $current == *"$provider"* ]] && { printf '%s' "$provider"; return; }
-  done < <(usage_providers)
+    [[ -n $id && ( $id == "$provider" || $id == *"$provider"* || $label == *"$provider"* ) ]] \
+      && { printf '%s' "$provider"; return; }
+  done < <(usage_providers | awk '{ print length, $0 }' | sort -rn | cut -d' ' -f2-)
   usage_first_ready
 }
 

@@ -91,8 +91,11 @@ Item {
             // own picker draws it the same way.
             Image {
               anchors.fill: parent
+              // A video has no frame to decode here, and an invisible Image
+              // still loads its source: no URL at all rather than a hidden one.
               visible: tile.modelData.video !== true
-              source: tile.modelData.source !== "" ? "file://" + tile.modelData.source : ""
+              source: tile.modelData.video === true || tile.modelData.source === ""
+                ? "" : "file://" + tile.modelData.source
               fillMode: Image.PreserveAspectCrop
               // Decoded at the size it is drawn *in device pixels*, rather
               // than at the size it was saved: twenty-five 4K wallpapers at

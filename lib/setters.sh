@@ -121,6 +121,22 @@ written_changed() {
   jq -c '(.written // {}) | keys' <<<"$(read_store)"
 }
 
+# The transparency switch became a three-way background with 4.5, under a new
+# name. The recorded original moves with it — true meant none, anything else
+# meant opaque — so Undo all puts back the look that was there instead of
+# asking a setter a question it no longer answers.
+bar_background_migrate() {
+  jq -e '(.written // {}) | has("bar-transparent")' <<<"$(read_store)" >/dev/null || return 0
+  local look=opaque
+  [[ $(jq -r '.written["bar-transparent"]' <<<"$(read_store)") == true ]] && look=none
+  if jq -e '(.written // {}) | has("bar-background")' <<<"$(read_store)" >/dev/null; then
+    edit_store 'if .written then .written |= del(.["bar-transparent"]) else . end'
+  else
+    edit_store 'if .written then .written |= del(.["bar-transparent"]) else . end
+      | .written = ((.written // {}) | .["bar-background"] = $look)' --arg look "$look"
+  fi
+}
+
 set_key() {
   local key=${1:-} value=${2:-}
 
@@ -159,6 +175,14 @@ set_key_apply() {
       # offers it only where the command cannot answer.
       case $value in
         dwindle|scrolling|floating) omarchy-hyprland-workspace-layout-default "$value" ;;
+        master)
+          # A machine whose original was master had no Omarchy default: the
+          # choice lived in Hyprland's general:layout alone. Both go back —
+          # the value live, and the saved default deleted, since anything
+          # Omarchy had saved would keep winning over the option.
+          hypr_apply_live general:layout master str
+          rm -f "${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/workspace-layouts/default.lua"
+          omarchy-restart-hyprctl >/dev/null 2>&1 || true ;;
         *) die "'$value' is not a layout Omarchy sets" ;;
       esac ;;
     nightlight)

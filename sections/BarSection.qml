@@ -65,7 +65,7 @@ Ui.SectionBody {
       value: page.app.barState.background !== undefined ? String(page.app.barState.background) : "opaque"
       options: [
         { value: "opaque", label: "Opaque" },
-        { value: "transparent", label: "Transparent" },
+        { value: "none", label: "Transparent" },
         { value: "glassy", label: "Glassy" }
       ]
       onPicked: function(next) { page.app.set("bar-background", next) }
@@ -192,11 +192,13 @@ Ui.SectionBody {
           }
 
           // Which section a widget belongs to is one decision, so it is one
-          // button: Move asks, and the sections it is not in answer.
+          // button: Move asks, and the sections it is not in answer. A spacer
+          // has no business in the tray drawer, whatever its section.
           property bool choosing: false
           readonly property var elsewhere: page.sections
             .map(function(s) { return s.key })
-            .filter(function(s) { return s !== widgetRow.section })
+            .filter(function(s) { return s !== widgetRow.section
+                                   && !(widgetRow.isSpacer && s === "tray") })
 
           function sectionTitle(key) {
             return page.sectionTitle(key)
