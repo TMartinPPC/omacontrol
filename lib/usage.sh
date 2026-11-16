@@ -33,9 +33,13 @@ usage_providers() {
 # longer names are tried first, so grokbot is not read as grok.
 usage_provider() {
   local id label provider
-  read -r id label < <(agents_state | jq -r '''
-    ([.items[]? | select(.checked == true)] | first)
-    | if . then "\(.id | ascii_downcase)\t\(.label | ascii_downcase)" else "\t" end''' 2>/dev/null)
+  IFS=$'\t' read -r id label < <(agents_state | jq -r '''
+    ([.items[]? | select(.checked == true)] | first) as $e
+    | (.current // "") as $c
+    | (if $e then [$e.id, $e.label]
+       else [$c, ([.items[]? | select(.id == $c)] | first | (.label // ""))] end)
+    | [ (.[0] // "" | ascii_downcase), (.[1] // "" | ascii_downcase) ]
+    | "\(.[0])\t\(.[1])"''' 2>/dev/null)
   while IFS= read -r provider; do
     [[ -n $id && ( $id == "$provider" || $id == *"$provider"* || $label == *"$provider"* ) ]] \
       && { printf '%s' "$provider"; return; }

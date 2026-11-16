@@ -34,14 +34,14 @@ Ui.SectionBody {
       options: {
         var out = [
           { value: "dwindle", label: "Dwindle" },
-          { value: "master", label: "Master" },
-          { value: "scrolling", label: "Scrolling" },
-          { value: "floating", label: "Floating" }
+          { value: "scrolling", label: "Scrolling" }
         ]
-        // Omarchy sets three layouts and no master; a machine still running
-        // one keeps the choice until it moves off.
-        if (page.omarchyOwns)
-          out = out.filter(function(o) { return o.value !== "master" })
+        // Floating is Omarchy's to hand out from 4.5 on; an older shell has
+        // no general:layout that would accept it.
+        if (page.omarchyOwns) out.push({ value: "floating", label: "Floating" })
+        // A machine still running master keeps the choice until it moves
+        // off — and on 4.5 that move is what hands the default to Omarchy.
+        if (page.engine === "master") out.push({ value: "master", label: "Master" })
         return out
       }
       onPicked: function(next) { page.app.set(page.settingKey, next) }

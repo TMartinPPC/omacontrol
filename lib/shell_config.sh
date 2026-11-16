@@ -70,6 +70,7 @@ bar_move() {
   local id=$1 target=$2
   [[ -n $id ]] || die "no widget id given"
   bar_check_section "$target"
+  [[ $target == tray && $id == $BAR_SPACER_ID ]] && die "a spacer has no place in the tray drawer"
   [[ -n $(bar_widget_section "$id") ]] || die "'$id' is not in the bar"
 
   edit_shell_json --arg id "$id" --arg target "$target" '
@@ -162,6 +163,7 @@ bar_spacer_add() {
   local section=$1 size=${2:-}
   [[ -n $size ]] || size=$BAR_SPACER_DEFAULT
   bar_check_section "$section"
+  [[ $section == tray ]] && die "a spacer has no place in the tray drawer"
   bar_spacer_size_valid "$size" || die "'$size' is not a width in pixels"
 
   edit_shell_json --arg s "$section" --arg id "$BAR_SPACER_ID" --argjson size "$size" '
